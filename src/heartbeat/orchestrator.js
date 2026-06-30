@@ -187,11 +187,14 @@ export class HeartbeatOrchestrator {
     if (!cognitiveCycle) return;
     this.stats.cyclesRun++;
 
+    // 找到消息来源的 Bot（优先用第一条消息的 _bot，否则回退到第一个 bot）
+    const sourceBot = msgs[0]?._bot || bots?.find(b => b?.constructor?.name === 'WeixinBot' && b.isRunning) || bots?.[0];
+
     const decision = await cognitiveCycle.run({
       persona, mind,
       messages: msgs,
       timeContext,
-      bot: bots?.[0],
+      bot: sourceBot,
       userId: msgs[0]?.userId,
       defaultUser: defaultUserId,
     });
