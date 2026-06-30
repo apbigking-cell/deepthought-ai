@@ -393,7 +393,7 @@ async function sendChat() {
       }
     }, 2000);
   } catch(e) {
-    if (currentStreamMsg) { currentStreamMsg.querySelector('.msg-body').textContent = '网络错误'; currentStreamMsg = null; }
+    if (currentStreamMsg) { currentStreamMsg.querySelector('.msg-body').textContent = '网络错误: ' + (e.message || e); currentStreamMsg = null; }
     document.getElementById('chatSendBtn').disabled = false;
     document.getElementById('chatSendBtn').textContent = '发送';
   }
