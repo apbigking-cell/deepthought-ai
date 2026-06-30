@@ -156,7 +156,9 @@ export class WebUIServer {
     let memCount = 0;
     try { memCount = getDb().prepare('SELECT COUNT(*) as cnt FROM episodic_memories WHERE expires_at > ?').get(Date.now())?.cnt || 0; } catch {}
 
-    // 每人格的心智快照 + 最近决策
+    // 检查微信连接状态
+    const wxConnected = this._isBotConnected('weixin');
+
     const personas = (personaRegistry?.list() || []).map(p => {
       const m = mindRegistry?.get(p.personaId, p.autonomyMode).snapshot() || {};
       const dec = stats.lastDecision?.[p.personaId];
@@ -194,7 +196,7 @@ export class WebUIServer {
       microSleeps: stats.microSleeps || 0,
       memoriesForgotten: stats.memoriesForgotten || 0,
       qqConnected: this._isBotConnected('qq'),
-      wxConnected: this._isBotConnected('weixin'),
+      wxConnected: wxConnected,
     };
   }
 
@@ -255,15 +257,8 @@ export class WebUIServer {
         if (!webBot) { result = { error: 'webbot not ready' }; break; }
         if (body.personaId) personaRouter?.assignPersona('web', 'web_user', body.personaId);
         const persona = personaRouter?.resolvePersona('web', 'web_user') || personaRegistry?.getDefault();
-        // queue replies for HTTP polling
-        this._chatReplies = this._chatReplies || [];
-        this._chatMsgId = this._chatMsgId || 0;
-        this._chatMsgId++;
-        const msgId = this._chatMsgId;
-        // save resolve for later
-        this._chatReplyResolvers = this._chatReplyResolvers || new Map();
-        webBot.receiveFromWeb('web_user', text, 'Web用户');
-        result = { ok: true, queued: true, msgId, persona: persona?.name || '', personaId: persona?.personaId };
+        webBot.receiveFromWeb('web_user', text, '阿皮');
+        result = { ok: true, queued: true, msgId: Date.now(), persona: persona?.name || '', personaId: persona?.personaId };
         break;
       }
       case '/api/chat/poll': {
@@ -300,8 +295,8 @@ export class WebUIServer {
         const db = getDb();
         const limit = parseInt(params.get('limit') || '50');
         result = db.prepare(
-          'SELECT direction, content, timestamp FROM message_log WHERE user_id = ? ORDER BY timestamp ASC LIMIT ?'
-        ).all('web_user', limit);
+          'SELECT direction, content, timestamp, user_id FROM message_log ORDER BY timestamp ASC LIMIT ?'
+        ).all(limit);
         break;
       }
       case '/api/thoughts': {

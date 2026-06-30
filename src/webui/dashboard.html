@@ -292,10 +292,8 @@ async function refreshEp(){ const r=await fetch('/api/memory/episodic').then(r=>
 // 加载历史消息
 async function loadChatHistory() {
   const a = document.getElementById('chatMsgs');
-  // if a message is in-flight, keep the UI as-is
   if (currentStreamMsg) {
     if (a.contains(currentStreamMsg)) return;
-    // stale (detached after tab switch): clean up and reload
     currentStreamMsg = null;
     document.getElementById('chatSendBtn').disabled = false;
     document.getElementById('chatSendBtn').textContent = '发送';
@@ -308,7 +306,9 @@ async function loadChatHistory() {
     for (const msg of history) {
       const n = new Date(msg.timestamp).toLocaleTimeString('zh-CN');
       const cls = msg.direction === 'in' ? 'msg-user' : 'msg-ai';
-      a.innerHTML += `<div class="msg ${cls}"><div class="msg-body">${esc(msg.content)}</div><div class="msg-time">${n}</div></div>`;
+      const channel = msg.user_id === 'web_user' ? '' : (msg.user_id ? ' [微信]' : '');
+      const nameTag = msg.direction === 'out' ? '' : '';
+      a.innerHTML += `<div class="msg ${cls}"><div class="msg-body">${esc(msg.content)}<span style="font-size:10px;color:#aaa;margin-left:6px">${channel}</span></div><div class="msg-time">${n}</div></div>`;
     }
     a.scrollTop = a.scrollHeight;
   } catch {}
