@@ -14,7 +14,7 @@ export class WebUIServer {
     this.components = components;
     this.server = null;
     this.wss = null;
-    this.port = parseInt(process.env.WEBUI_PORT || '3000');
+    this.port = parseInt(process.env.WEBUI_PORT || process.env.PORT || '3000');
     this.statusSubs = new Set();
     this.sockets = new Set();
     this._statusTimer = null;
