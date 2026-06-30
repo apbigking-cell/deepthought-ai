@@ -63,10 +63,11 @@ export const config = {
 
   // 认知循环（意识流 + 目标 + 自主工作）
   cognition: {
-    // 自发思考最小间隔(ms)：空闲时多久产生一次内心独白（非每秒调LLM，控成本）
-    spontaneousThinkMs: parseInt(process.env.COGNITION_THINK_MS || '45000'),
+    // 自发思考最小间隔(ms)：被动模式下设为极大值 = 不发消息不思考
+    spontaneousThinkMs: parseInt(process.env.COGNITION_THINK_MS || '86400000'), // 默认 24h
+
     // 高唤醒/有待办时的加速下限
-    minThinkMs: parseInt(process.env.COGNITION_MIN_THINK_MS || '12000'),
+    minThinkMs: parseInt(process.env.COGNITION_MIN_THINK_MS || '600000'),
     // 工作型人格单次心跳工作循环的最大工具轮数与时间盒(ms)
     workMaxRounds: parseInt(process.env.WORK_MAX_ROUNDS || '6'),
     workBudgetMs: parseInt(process.env.WORK_BUDGET_MS || '60000'),

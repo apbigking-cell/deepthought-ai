@@ -120,7 +120,7 @@ input:focus,textarea:focus,select:focus{border-color:rgba(0,0,0,0.2);box-shadow:
     <div class="tab" id="tab-mind">
       <div class="dash-grid">
         <div class="glass-card card card-full"><div class="card-title">多人格心智 <span style="font-weight:400;color:#999">（每个都是独立思考的人）</span></div><div id="mindPersonas"><div class="empty">等待连接…</div></div></div>
-        <div class="glass-card card card-full"><div class="card-title">意识流 · 内心独白 <select id="mindPersonaSel" onchange="refreshMind()" style="float:right;font-size:12px"></select></div><div class="card-scroll" id="thoughtsCard" style="max-height:340px"><div class="empty">等待连接…</div></div></div>
+        <div class="glass-card card card-full"><div class="card-title">意识流 · 内心独白 <select id="mindPersonaSel" onchange="refreshMind()" style="float:right;font-size:12px"></select> <button class="btn btn-primary btn-sm" onclick="refreshMind()">生成独白</button></div><div class="card-scroll" id="thoughtsCard" style="max-height:340px"><div class="empty">选择人格后点击「生成独白」</div></div></div>
         <div class="glass-card card"><div class="card-title">目标 / 在做的事</div><div class="card-scroll" id="goalsCard"><div class="empty">等待连接…</div></div></div>
         <div class="glass-card card"><div class="card-title">待批准操作 <span style="font-weight:400;color:#C0392B" id="approvalsBadge"></span></div><div class="card-scroll" id="approvalsCard"><div class="empty">无</div></div></div>
       </div>
@@ -129,10 +129,11 @@ input:focus,textarea:focus,select:focus{border-color:rgba(0,0,0,0.2);box-shadow:
     <!-- Chat -->
     <div class="tab active" id="tab-chat">
       <div class="glass-card chat-shell">
-        <div class="chat-head" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.06)">
+        <div class="chat-head" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.06);flex-wrap:wrap">
           <span style="font-size:13px;color:#666">和谁聊：</span>
           <select id="chatPersonaSel" onchange="switchChatPersona()" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid rgba(0,0,0,.12)"></select>
           <span id="chatPersonaTag" style="font-size:12px;color:#999"></span>
+          <button class="btn btn-sm" onclick="clearChat()" style="margin-left:auto;font-size:11px">清空</button>
         </div>
         <div class="chat-body" id="chatMsgs"><div class="empty" style="margin:auto">输入消息开始对话</div></div>
         <div class="chat-bar">
@@ -186,7 +187,6 @@ let currentStreamMsg = null;
       document.getElementById('statusTick').textContent = 'Tick ' + (r.tick || 0);
     }
   } catch {}
-  loadTab('dashboard');
   // poll status every 5s
   setInterval(async () => {
     try {
@@ -273,12 +273,13 @@ async function refreshMind(){
   const sel=document.getElementById('mindPersonaSel');
   const pid=sel?.value||_mindSel;
   if(!pid) return;
-  const thoughts=await fetch('/api/thoughts?persona='+encodeURIComponent(pid)+'&limit=60').then(r=>r.json()).catch(()=>[]);
+  // use fake thoughts (zero token cost) instead of real ones
+  const thoughts=await fetch('/api/fake-thoughts?persona='+encodeURIComponent(pid)+'&limit=60').then(r=>r.json()).catch(()=>[]);
   const tc=document.getElementById('thoughtsCard');
-  tc.innerHTML=(thoughts&&thoughts.length)?thoughts.map(t=>`<div class="mem-row"><div class="mem-tag">${new Date(t.created_at).toLocaleTimeString('zh-CN')} · ${t.kind}${t.action?'→'+t.action:''}</div><div class="mem-text">${esc(t.content)}</div></div>`).join(''):'<div class="empty">还没有念头</div>';
+  tc.innerHTML=(thoughts&&thoughts.length)?thoughts.map(t=>`<div class="mem-row"><div class="mem-tag">${new Date(t.created_at).toLocaleTimeString('zh-CN')} · ${t.kind}${t.action?'→'+t.action:''}</div><div class="mem-text">${esc(t.content)}</div></div>`).join(''):'<div class="empty">点击「生成独白」查看内心活动</div>';
   const goals=await fetch('/api/goals?persona='+encodeURIComponent(pid)).then(r=>r.json()).catch(()=>[]);
   const gc=document.getElementById('goalsCard');
-  gc.innerHTML=(goals&&goals.length)?goals.map(g=>`<div class="mem-row" style="display:block"><div class="mem-text"><b>${esc(g.title)}</b> <span style="font-size:11px;color:#888">[${g.kind}·${g.status}·${(g.progress*100|0)}%]</span></div>${g.description?`<div style="font-size:12px;color:#666">${esc(g.description)}</div>`:''}</div>`).join(''):'<div class="empty">还没有目标</div>';
+  gc.innerHTML=(goals&&goals.length)?goals.map(g=>`<div class="mem-row" style="display:block"><div class="mem-text"><b>${esc(g.title)}</b> <span style="font-size:11px;color:#888">[${g.kind}·${g.status}·${(g.progress*100|0)}%]</span></div>${g.description?`<div style="font-size:12px;color:#666">${esc(g.description)}</div>`:''}</div>`).join(''):'<div class="empty">被动模式·暂无目标</div>';
 }
 
 async function refreshWm(){ const r=await fetch('/api/memory/working').then(r=>r.json()); document.getElementById('wmCard').innerHTML=r.length?r.map(c=>`<div class="mem-row"><div class="mem-tag">${c.type}</div><div class="mem-text">${esc(c.content)}</div></div>`).join(''):'<div class="empty">空</div>' }
@@ -306,7 +307,15 @@ function switchChatPersona() {
   const sel = document.getElementById('chatPersonaSel');
   _chatPersona = sel.value;
   _chatPersonaName = sel.options[sel.selectedIndex]?.textContent || '';
-  document.getElementById('chatPersonaTag').textContent = _chatPersonaName ? `现在和「${_chatPersonaName}」对话` : '';
+  const name = _chatPersonaName.replace(/（[^）]*）/g, '');
+  document.getElementById('chatPersonaTag').textContent = name ? `现在和「${name}」对话` : '';
+}
+
+function clearChat() {
+  currentStreamMsg = null;
+  document.getElementById('chatSendBtn').disabled = false;
+  document.getElementById('chatSendBtn').textContent = '发送';
+  document.getElementById('chatMsgs').innerHTML = '<div class="empty" style="margin:auto">输入消息开始对话</div>';
 }
 
 async function sendChat() {

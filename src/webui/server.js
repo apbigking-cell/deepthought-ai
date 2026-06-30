@@ -308,6 +308,43 @@ export class WebUIServer {
         ).all(pid, limit);
         break;
       }
+      case '/api/fake-thoughts': {
+        // generate fake thoughts WITHOUT calling LLM (zero token cost)
+        const pid = params.get('persona') || 'linxia';
+        const p = this.components.personaRegistry?.getPersona(pid);
+        const name = p?.name || '林夏';
+        const now = new Date();
+        const phrases = [
+          '今天天气真不错，适合去公园散散步',
+          '刚看了一篇关于记忆和意识的有趣文章',
+          '年糕又趴在键盘上了…这小家伙',
+          '最近在构思新故事的开头，有点灵感了',
+          '想喝杯热茶，然后安静地写点东西',
+          '朋友发来的消息让我心情变好了',
+          '突然想到一个好点子，得记下来',
+          '窗外有只鸟在唱歌，真悠闲',
+          '又在想那个哲学问题：记忆定义了我们是谁',
+          '今天吃了家新开的店，味道不错',
+          '沉浸在自己的小世界里，感觉很平静',
+          '想起以前的一些事，有点怀念',
+        ];
+        const actions = ['发呆', '看书', '和豆包玩', '写稿子', '回消息', '听歌', '刷手机', '整理笔记'];
+        const count = parseInt(params.get('count') || '5');
+        const fake = [];
+        for (let i = 0; i < count; i++) {
+          const t = new Date(now - (i * 120000 + Math.random() * 60000));
+          fake.push({
+            tick: 0,
+            kind: 'thought',
+            content: phrases[Math.floor(Math.random() * phrases.length)],
+            action: name === '小语' ? '在书店整理书架' : actions[Math.floor(Math.random() * actions.length)],
+            valence: (Math.random() * 0.6 + 0.2).toFixed(2),
+            created_at: t.toISOString(),
+          });
+        }
+        result = fake;
+        break;
+      }
       case '/api/goals': {
         const pid = params.get('persona') || this.components.personaRegistry?.defaultId;
         result = this.components.goalStore?.list(pid) || [];
