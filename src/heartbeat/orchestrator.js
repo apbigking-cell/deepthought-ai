@@ -92,6 +92,20 @@ export class HeartbeatOrchestrator {
             continue;
           }
 
+          // 命令：暂停/恢复引擎
+          if (/^\/(?:暂停|pause)$/i.test(cmd)) {
+            this.stop();
+            bot.enqueueOutput?.(m.userId, '已暂停。再发 /恢复 或 /resume 可以继续聊天。', m.id);
+            this.stats.messagesProcessed++;
+            continue;
+          }
+          if (/^\/(?:恢复|resume)$/i.test(cmd)) {
+            this.start();
+            bot.enqueueOutput?.(m.userId, '已恢复。继续聊天吧〜', m.id);
+            this.stats.messagesProcessed++;
+            continue;
+          }
+
           const persona = personaRouter?.resolvePersona(platform, m.userId) || personaRegistry?.getDefault();
           const pid = persona?.personaId || personaRegistry?.defaultId;
           if (!this.pendingByPersona.has(pid)) this.pendingByPersona.set(pid, []);
