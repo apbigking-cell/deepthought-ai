@@ -67,10 +67,9 @@ export class WebUIServer {
       try { thought = pid ? this.components.mindRegistry?.get(pid, persona.autonomyMode).snapshot().currentThought : null; } catch {}
       const payload = JSON.stringify({ type: 'chat_reply', text, persona: persona?.name || '', personaId: pid, thought });
       for (const ws of this.sockets) if (ws.readyState === 1) ws.send(payload);
-      // resolve HTTP polling promise
-      if (this._pendingReplies?.has(userId)) {
-        this._pendingReplies.get(userId)({ text, persona: persona?.name || '', personaId: pid, thought });
-      }
+      // push to HTTP poll buffer
+      this._chatReplies = this._chatReplies || [];
+      this._chatReplies.push({ text, persona: persona?.name || '', personaId: pid, thought });
     });
   }
 
@@ -251,21 +250,23 @@ export class WebUIServer {
         if (!webBot) { result = { error: 'webbot not ready' }; break; }
         if (body.personaId) personaRouter?.assignPersona('web', 'web_user', body.personaId);
         const persona = personaRouter?.resolvePersona('web', 'web_user') || personaRegistry?.getDefault();
-        const pid = persona?.personaId;
-        // create promise for async reply
-        const replyPromise = new Promise(resolve => {
-          this._pendingReplies = this._pendingReplies || new Map();
-          this._pendingReplies.set('web_user', resolve);
-        });
+        // queue replies for HTTP polling
+        this._chatReplies = this._chatReplies || [];
+        this._chatMsgId = this._chatMsgId || 0;
+        this._chatMsgId++;
+        const msgId = this._chatMsgId;
+        // save resolve for later
+        this._chatReplyResolvers = this._chatReplyResolvers || new Map();
         webBot.receiveFromWeb('web_user', text, 'Web用户');
-        // wait up to 30s for cognitive cycle to respond
-        const timeout = new Promise(r => setTimeout(() => r(null), 30000));
-        const reply = await Promise.race([replyPromise, timeout]);
-        this._pendingReplies?.delete('web_user');
-        if (reply) {
-          result = { ok: true, reply: reply.text, persona: reply.persona, personaId: pid, thought: reply.thought };
+        result = { ok: true, queued: true, msgId, persona: persona?.name || '', personaId: persona?.personaId };
+        break;
+      }
+      case '/api/chat/poll': {
+        const pending = this._chatReplies?.shift();
+        if (pending) {
+          result = { ok: true, reply: pending.text, persona: pending.persona, personaId: pending.personaId, thought: pending.thought };
         } else {
-          result = { ok: true, reply: null, persona: persona?.name, personaId: pid, thought: null, hint: 'thinking' };
+          result = { ok: true, reply: null };
         }
         break;
       }

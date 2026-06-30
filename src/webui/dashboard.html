@@ -201,9 +201,8 @@ let currentStreamMsg = null;
 })();
 
 let _mindSel = null;
-let _chatPersona = null;     // 当前对话人格id
+let _chatPersona = null;
 let _chatPersonaName = '';
-let _chatTimeout = null;
 
 // === Status ===
 function onStatus(s) {
@@ -321,30 +320,47 @@ async function sendChat() {
   currentStreamMsg.innerHTML = `<div class="msg-name">${esc(_chatPersonaName||'')}</div><div class="msg-body">思考中…</div><div class="msg-time">${n}</div>`;
   a.appendChild(currentStreamMsg);
   a.scrollTop = a.scrollHeight;
+  document.getElementById('chatSendBtn').disabled = true;
   document.getElementById('chatSendBtn').textContent = '…';
   try {
     const r = await api('/api/chat/send', { message: t, personaId: _chatPersona || undefined });
-    const nn = new Date().toLocaleTimeString('zh-CN');
-    if (r.reply) {
-      onChatReply({ text: r.reply, persona: r.persona, thought: r.thought });
-    } else if (r.hint === 'thinking') {
-      if (currentStreamMsg) {
-        currentStreamMsg.querySelector('.msg-body').innerHTML = `<span style="color:#999">（${esc(_chatPersonaName||'')}暂时没回…再试一次）</span>`;
-        currentStreamMsg = null;
-      }
-    } else {
-      if (currentStreamMsg) {
-        currentStreamMsg.querySelector('.msg-body').innerHTML = `<span style="color:#c0392b">错误: ${esc(r.error||'unknown')}</span>`;
-        currentStreamMsg = null;
-      }
+    if (!r.ok) {
+      if (currentStreamMsg) { currentStreamMsg.querySelector('.msg-body').textContent = '发送失败'; currentStreamMsg = null; }
+      document.getElementById('chatSendBtn').disabled = false;
+      document.getElementById('chatSendBtn').textContent = '发送';
+      return;
     }
+    // poll for reply (max 90 seconds)
+    const start = Date.now();
+    const poll = setInterval(async () => {
+      if (!currentStreamMsg) { clearInterval(poll); return; }
+      try {
+        const p = await api('/api/chat/poll');
+        if (p.reply) {
+          clearInterval(poll);
+          onChatReply({ text: p.reply, persona: p.persona, thought: p.thought });
+          document.getElementById('chatSendBtn').disabled = false;
+          document.getElementById('chatSendBtn').textContent = '发送';
+        } else if (Date.now() - start > 90000) {
+          clearInterval(poll);
+          currentStreamMsg.querySelector('.msg-body').innerHTML = `<span style="color:#999">（${esc(_chatPersonaName||'')}在忙，等会儿再试吧）</span>`;
+          currentStreamMsg = null;
+          document.getElementById('chatSendBtn').disabled = false;
+          document.getElementById('chatSendBtn').textContent = '发送';
+        }
+      } catch(e) {
+        clearInterval(poll);
+        currentStreamMsg.querySelector('.msg-body').textContent = '网络错误';
+        currentStreamMsg = null;
+        document.getElementById('chatSendBtn').disabled = false;
+        document.getElementById('chatSendBtn').textContent = '发送';
+      }
+    }, 2000);
   } catch(e) {
-    if (currentStreamMsg) {
-      currentStreamMsg.querySelector('.msg-body').textContent = '网络错误，请重试';
-      currentStreamMsg = null;
-    }
+    if (currentStreamMsg) { currentStreamMsg.querySelector('.msg-body').textContent = '网络错误'; currentStreamMsg = null; }
+    document.getElementById('chatSendBtn').disabled = false;
+    document.getElementById('chatSendBtn').textContent = '发送';
   }
-  document.getElementById('chatSendBtn').textContent = '发送';
 }
 
 function onChatThinking(persona) {
