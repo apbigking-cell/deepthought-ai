@@ -1,0 +1,18 @@
+services:
+  deepthought:
+    build: .
+    container_name: deepthought-ai
+    ports:
+      - "3000:3000"
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-chat}
+      - WEIXIN_BOT_TOKEN=${WEIXIN_BOT_TOKEN:-}
+      - LOCATION_CITY=${LOCATION_CITY:-北京}
+      - LOCATION_REGION=${LOCATION_REGION:-华北}
+      - LOCATION_COUNTRY=${LOCATION_COUNTRY:-中国}
+      - LOCATION_TIMEZONE=${LOCATION_TIMEZONE:-Asia/Shanghai}
+    restart: unless-stopped
+    volumes:
+      - ./data/memory.db:/app/data/memory.db

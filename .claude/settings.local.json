@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(npm install *)",
+      "Bash(node -e ' *)",
+      "Bash(timeout 8 node src/index.js)",
+      "Bash(curl -s -X POST https://api.sgroup.qq.com/app/getAppAccessToken -H 'Content-Type: application/json' -d '{\"appId\":\"1904006103\",\"clientSecret\":\"hIfngKirlPoytZ2H\"}')",
+      "Bash(curl -s -X POST https://bots.qq.com/app/getAppAccessToken -H 'Content-Type: application/json' -d '{\"appId\":\"1904006103\",\"clientSecret\":\"hIfngKirlPoytZ2H\"}')",
+      "Bash(timeout 10 node src/index.js)",
+      "Bash(taskkill /F /IM node.exe)"
+    ]
+  }
+}

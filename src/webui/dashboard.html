@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>深念 DeepThought</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter','SF Pro Display','PingFang SC','Microsoft YaHei',sans-serif;background:#F2F2F7;color:#1C1C1E;min-height:100vh;-webkit-font-smoothing:antialiased;overflow:hidden;display:flex}
+html,body{height:100%}
+.glass{background:rgba(255,255,255,0.48);backdrop-filter:blur(48px) saturate(1.4);-webkit-backdrop-filter:blur(48px) saturate(1.4);border:1px solid rgba(255,255,255,0.6);outline:1px solid rgba(229,229,234,0.4);border-radius:28px}
+.glass-card{background:rgba(255,255,255,0.52);backdrop-filter:blur(52px);-webkit-backdrop-filter:blur(52px);border:1px solid rgba(255,255,255,0.7);box-shadow:0 24px 48px -12px rgba(0,0,0,0.08),0 2px 4px rgba(0,0,0,0.02);border-radius:40px}
+.sidebar{width:220px;background:rgba(255,255,255,0.55);backdrop-filter:blur(56px);border-right:1px solid rgba(0,0,0,0.04);padding:24px 16px;display:flex;flex-direction:column;flex-shrink:0;gap:4px}
+.sidebar-logo{font-size:20px;font-weight:800;letter-spacing:-0.04em;padding:0 12px 20px;background:linear-gradient(135deg,#1C1C1E 0%,#636366 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.nav-item{padding:10px 14px;border-radius:18px;cursor:pointer;font-size:13px;font-weight:550;color:#636366;transition:all 0.2s cubic-bezier(0.25,0.8,0.25,1.2);display:flex;align-items:center;gap:10px;letter-spacing:-0.01em;user-select:none}
+.nav-item:hover{background:rgba(0,0,0,0.04);color:#1C1C1E}
+.nav-item:active{transform:scale(0.96)}
+.nav-item.active{background:rgba(255,255,255,0.7);color:#1C1C1E;box-shadow:0 2px 8px rgba(0,0,0,0.04),inset 0 1px 0 rgba(255,255,255,0.8);font-weight:650}
+.nav-icon{font-size:17px;width:22px;text-align:center}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;background:transparent}
+.topbar{padding:14px 28px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-title{font-size:18px;font-weight:750;letter-spacing:-0.03em;color:#1C1C1E}
+.status-pill{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:650;letter-spacing:0.04em;text-transform:uppercase;background:rgba(52,199,89,0.12);color:#1B7F3B;border:1px solid rgba(52,199,89,0.2);display:flex;align-items:center;gap:6px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#34C759;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.content{flex:1;overflow-y:auto;padding:0 28px 28px;scroll-behavior:smooth}
+.content::-webkit-scrollbar{width:4px}.content::-webkit-scrollbar-track{background:transparent}.content::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.08);border-radius:20px}
+.tab{display:none;padding-bottom:40px}.tab.active{display:block}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:20px;margin-bottom:20px}
+.card{padding:24px}.card-title{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(0,0,0,0.3);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.card-full{grid-column:1/-1}.card-scroll{max-height:260px;overflow-y:auto}
+.stat-record{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.03)}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(0,0,0,0.35)}
+.stat-value{font-size:14px;font-weight:600;color:#1C1C1E}
+.bar-track{height:4px;border-radius:20px;background:rgba(0,0,0,0.06);overflow:hidden;margin:4px 0 8px}
+.bar-fill{height:100%;border-radius:20px;transition:width 0.3s}
+.mood-pill{display:inline-flex;padding:6px 18px;border-radius:24px;font-size:15px;font-weight:650}
+.mood-neutral{background:rgba(0,0,0,0.04);color:#636366}.mood-happy{background:rgba(52,199,89,0.08);color:#1B7F3B}.mood-excited{background:rgba(90,140,255,0.08);color:#1A5DC7}.mood-angry{background:rgba(255,59,48,0.08);color:#C0392B}.mood-sad{background:rgba(120,140,255,0.1);color:#4A5FC7}.mood-bored{background:rgba(255,180,30,0.08);color:#B57A10}.mood-anxious{background:rgba(255,140,30,0.08);color:#C06510}
+.mem-row{padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.03);font-size:12px}
+.mem-tag{font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:rgba(0,0,0,0.3)}
+.mem-text{color:#3A3A3C;line-height:1.5;margin-top:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border:none;border-radius:18px;font-size:13px;font-weight:600;letter-spacing:-0.01em;cursor:pointer;transition:all 0.2s cubic-bezier(0.25,0.8,0.25,1.2);user-select:none}
+.btn:active{transform:scale(0.96)}
+.btn-primary{background:#1C1C1E;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.12)}.btn-primary:hover{background:#2C2C2E}
+.btn-sm{padding:5px 12px;font-size:11px;border-radius:14px}
+input,textarea,select{background:rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.06);box-shadow:inset 0 1px 2px rgba(0,0,0,0.03);color:#1C1C1E;padding:10px 14px;border-radius:16px;font-size:13px;width:100%;margin:4px 0 8px;font-family:inherit;letter-spacing:-0.01em;transition:all 0.2s;outline:none}
+input:focus,textarea:focus,select:focus{border-color:rgba(0,0,0,0.2);box-shadow:inset 0 1px 3px rgba(0,0,0,0.05),0 0 0 3px rgba(0,0,0,0.03);background:rgba(255,255,255,0.8)}
+.section-title{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(0,0,0,0.25);padding:20px 0 10px}
+.config-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.config-row{padding:12px 0;border-bottom:1px solid rgba(0,0,0,0.03)}.config-label{font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(0,0,0,0.3);margin-bottom:4px}.config-value{font-size:14px;font-weight:550;color:#1C1C1E}.config-hint{font-size:11px;color:rgba(0,0,0,0.25);margin-top:2px}
+.chat-shell{display:flex;flex-direction:column;height:calc(100vh - 140px);border-radius:40px;overflow:hidden}
+.chat-body{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:4px}
+.chat-body::-webkit-scrollbar{width:3px}.chat-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.05);border-radius:20px}
+.chat-bar{padding:16px 20px;display:flex;gap:10px}
+.chat-bar input{flex:1;margin:0;padding:12px 18px;font-size:14px;border-radius:22px}
+.chat-bar .btn{border-radius:22px;padding:12px 24px}
+.msg{max-width:72%;padding:12px 16px;border-radius:22px;font-size:13px;line-height:1.55;letter-spacing:-0.01em;animation:msgIn 0.3s ease-out}@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg-user{background:rgba(0,0,0,0.06);color:#1C1C1E;align-self:flex-end;border-bottom-right-radius:6px}
+.msg-ai{background:rgba(255,255,255,0.65);color:#1C1C1E;align-self:flex-start;border-bottom-left-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.04)}
+.msg-time{font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:rgba(0,0,0,0.25);margin-top:4px}.msg-user .msg-time{text-align:right}
+.cursor::after{content:'|';animation:blink 0.8s infinite}@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.empty{text-align:center;color:rgba(0,0,0,0.2);padding:32px 0;font-size:13px;font-weight:500}
+.msg-name{font-size:11px;font-weight:700;color:#1A5DC7;margin-bottom:3px;opacity:.85}
+.msg-mono{margin-top:6px;border-top:1px dashed rgba(0,0,0,.1);padding-top:5px;cursor:pointer}
+.msg-mono .mono-toggle{font-size:11px;color:#888}
+.msg-mono .mono-text{display:none;margin-top:4px;font-size:12px;color:#666;font-style:italic;white-space:pre-wrap}
+.msg-mono.open .mono-text{display:block}
+.msg-body .code{display:block;background:#1C1C1E;color:#E6E6E6;padding:10px 12px;border-radius:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;overflow-x:auto;white-space:pre;margin:6px 0}
+.msg-body code{background:rgba(0,0,0,.07);padding:1px 5px;border-radius:5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.dots{animation:blink 1.2s infinite}
+/* Mobile */
+@media(max-width:768px){
+  body{flex-direction:column;overflow:auto}
+  html{overflow:auto}
+  .sidebar{width:100%;flex-direction:row;padding:8px 12px;gap:0;overflow-x:auto;border-bottom:1px solid rgba(0,0,0,0.04);flex-shrink:0;-webkit-overflow-scrolling:touch}
+  .sidebar-logo{display:none}
+  .nav-item{font-size:11px;padding:6px 10px;gap:4px;white-space:nowrap;flex-shrink:0}
+  .main{flex:1;min-height:0;display:flex;flex-direction:column}
+  .topbar{padding:10px 16px;flex-shrink:0}.topbar-title{font-size:15px}
+  .content{flex:1;overflow-y:auto;padding:0 12px 12px;-webkit-overflow-scrolling:touch}
+  .dash-grid{grid-template-columns:1fr;gap:12px}
+  .config-grid{grid-template-columns:1fr;gap:12px}
+  .card{padding:16px}
+  .chat-shell{height:100%;flex:1}
+  .chat-body{flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch}
+  .chat-bar{padding:10px 14px;flex-shrink:0}
+  .msg{max-width:88%;font-size:12px}
+  .glass-card{border-radius:28px}
+}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">深念</div>
+  <div class="nav-item active" data-tab="chat"><span class="nav-icon">◎</span>在线聊天</div>
+  <div class="nav-item" data-tab="mind"><span class="nav-icon">❂</span>心智</div>
+  <div class="nav-item" data-tab="dashboard"><span class="nav-icon">◉</span>仪表盘</div>
+  <div class="nav-item" data-tab="ai-config"><span class="nav-icon">◈</span>AI 配置</div>
+  <div class="nav-item" data-tab="bot-config"><span class="nav-icon">◇</span>机器人</div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="tabTitle">在线聊天</div>
+    <div class="status-pill"><span class="status-dot"></span><span id="statusText">运行中</span> · <span id="statusTick">--</span></div>
+  </div>
+
+  <div class="content">
+    <!-- Dashboard -->
+    <div class="tab" id="tab-dashboard">
+      <div class="dash-grid">
+        <div class="glass-card card"><div class="card-title">引擎状态</div><div id="statsCard"><div class="empty">等待连接…</div></div></div>
+        <div class="glass-card card"><div class="card-title">情绪仪表</div><div id="moodCard"><div class="empty">等待连接…</div></div></div>
+        <div class="glass-card card"><div class="card-title">工作记忆 L1</div><div class="card-scroll" id="wmCard"><div class="empty">等待连接…</div></div></div>
+        <div class="glass-card card card-full"><div class="card-title">情景记忆 L2 <span id="epTotal"></span></div><div class="card-scroll" id="epCard"><div class="empty">等待连接…</div></div></div>
+      </div>
+    </div>
+
+    <!-- Mind (内心世界) -->
+    <div class="tab" id="tab-mind">
+      <div class="dash-grid">
+        <div class="glass-card card card-full"><div class="card-title">多人格心智 <span style="font-weight:400;color:#999">（每个都是独立思考的人）</span></div><div id="mindPersonas"><div class="empty">等待连接…</div></div></div>
+        <div class="glass-card card card-full"><div class="card-title">意识流 · 内心独白 <select id="mindPersonaSel" onchange="refreshMind()" style="float:right;font-size:12px"></select></div><div class="card-scroll" id="thoughtsCard" style="max-height:340px"><div class="empty">等待连接…</div></div></div>
+        <div class="glass-card card"><div class="card-title">目标 / 在做的事</div><div class="card-scroll" id="goalsCard"><div class="empty">等待连接…</div></div></div>
+        <div class="glass-card card"><div class="card-title">待批准操作 <span style="font-weight:400;color:#C0392B" id="approvalsBadge"></span></div><div class="card-scroll" id="approvalsCard"><div class="empty">无</div></div></div>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="tab active" id="tab-chat">
+      <div class="glass-card chat-shell">
+        <div class="chat-head" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.06)">
+          <span style="font-size:13px;color:#666">和谁聊：</span>
+          <select id="chatPersonaSel" onchange="switchChatPersona()" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid rgba(0,0,0,.12)"></select>
+          <span id="chatPersonaTag" style="font-size:12px;color:#999"></span>
+        </div>
+        <div class="chat-body" id="chatMsgs"><div class="empty" style="margin:auto">输入消息开始对话</div></div>
+        <div class="chat-bar">
+          <input id="chatInput" placeholder="输入消息…" onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="btn btn-primary" id="chatSendBtn" onclick="sendChat()">发送</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Config -->
+    <div class="tab" id="tab-ai-config">
+      <div class="section-title">人格</div>
+      <div class="config-grid">
+        <div class="glass-card card"><div class="card-title">当前人格</div><div id="personaConfig"><div class="empty">加载中…</div></div></div>
+        <div class="glass-card card"><div class="card-title">注册新人格</div><input id="personaSeedFile" placeholder="种子文件 (如 worker-zhang.seed.json)"><button class="btn btn-primary btn-sm" onclick="regPersona()">注册</button><div class="config-hint">文件需放在 data/personas/ 目录</div></div>
+      </div>
+      <div class="section-title">位置 & 模型</div>
+      <div class="config-grid">
+        <div class="glass-card card"><div class="card-title">位置</div><div id="locationConfig"></div></div>
+        <div class="glass-card card"><div class="card-title">模型参数</div><div id="modelConfig"></div></div>
+      </div>
+    </div>
+
+    <!-- Bot Config -->
+    <div class="tab" id="tab-bot-config">
+      <div class="section-title">消息平台</div>
+      <div class="config-grid">
+        <div class="glass-card card"><div class="card-title">QQ 机器人</div><div id="qqConfig"><div class="empty">加载中…</div></div></div>
+        <div class="glass-card card"><div class="card-title">微信机器人</div><div id="wxConfig"><div class="empty">加载中…</div></div></div>
+      </div>
+      <div class="section-title">工具</div>
+      <div class="config-grid">
+        <div class="glass-card card"><div class="card-title">技能 / 工具 <button class="btn btn-primary btn-sm" onclick="addSkillPanel()">+</button></div><div class="card-scroll" id="toolConfig"></div></div>
+        <div class="glass-card card"><div class="card-title">MCP 服务器 <button class="btn btn-primary btn-sm" onclick="addMcpPanel()">+</button></div><div class="card-scroll" id="mcpConfig"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === WebSocket ===
+const ws = new WebSocket(`ws://${location.host}`);
+let currentStreamMsg = null;
+
+ws.onopen = () => {
+  ws.send(JSON.stringify({ type: 'subscribe_status' }));
+  loadTab('dashboard');
+};
+ws.onmessage = (e) => {
+  const msg = JSON.parse(e.data);
+  if (msg.type === 'status') onStatus(msg.data);
+  else if (msg.type === 'chat_thinking') onChatThinking(msg.persona);
+  else if (msg.type === 'chat_reply') onChatReply(msg);
+  else if (msg.type === 'persona_set') { _chatPersonaName = msg.name; }
+};
+
+let _mindSel = null;
+let _chatPersona = null;     // 当前对话人格id
+let _chatPersonaName = '';
+let _chatTimeout = null;
+
+// === Status ===
+function onStatus(s) {
+  document.getElementById('statusText').textContent = s.isSleeping?'微睡眠':(s.isProcessing?'处理中':'运行中');
+  document.getElementById('statusTick').textContent = `Tick ${s.tick}`;
+
+  const moodCN={neutral:'平静',happy:'开心',excited:'兴奋',angry:'生气',sad:'难过',bored:'无聊',anxious:'焦虑'};
+  document.getElementById('statsCard').innerHTML=`
+    <div class="stat-record"><span class="stat-label">心跳</span><span class="stat-value">${s.tick}</span></div>
+    <div class="stat-record"><span class="stat-label">消息/回复</span><span class="stat-value">${s.messagesProcessed}/${s.responsesGenerated}</span></div>
+    <div class="stat-record"><span class="stat-label">思考循环/念头</span><span class="stat-value">${s.cyclesRun||0}/${s.thoughtsGenerated||0}</span></div>
+    <div class="stat-record"><span class="stat-label">完成工作/编码</span><span class="stat-value">${s.worksDone||0}/${s.memoriesEncoded}</span></div>
+    <div class="stat-record"><span class="stat-label">主动社交/微睡眠</span><span class="stat-value">${s.initiationsMade}/${s.microSleeps}</span></div>
+    <div class="stat-record"><span class="stat-label">QQ/微信</span><span class="stat-value"><span style="color:${s.qqConnected?'#1B7F3B':'#aaa'}">QQ</span> <span style="color:${s.wxConnected?'#1B7F3B':'#aaa'}">WeChat</span></span></div>
+    <div class="stat-record"><span class="stat-label">人格</span><span class="stat-value">${esc(s.persona)}</span></div>`;
+
+  renderMindStatus(s);
+
+  document.getElementById('moodCard').innerHTML=`
+    <div style="text-align:center;margin-bottom:12px"><span class="mood-pill mood-${s.mood}">${moodCN[s.mood]||s.mood}</span></div>
+    <div class="stat-label">Valence</div><div class="bar-track"><div class="bar-fill" style="width:${((s.valence+1)/2*100).toFixed(0)}%;background:${s.valence>0?'#1B7F3B':'#C0392B'}"></div></div>
+    <div class="stat-label">Arousal</div><div class="bar-track"><div class="bar-fill" style="width:${(s.arousal*100).toFixed(0)}%;background:#1A5DC7"></div></div>
+    <div class="stat-label">Dominance</div><div class="bar-track"><div class="bar-fill" style="width:${(s.dominance*100).toFixed(0)}%;background:#888"></div></div>
+    <div class="stat-record"><span class="stat-label">精力</span><span class="stat-value">${(s.energy*100).toFixed(0)}%</span></div>`;
+
+  if (window._wmInterval == null) { window._wmInterval = setInterval(refreshWm, 3000); window._epInterval = setInterval(refreshEp, 5000); }
+}
+
+const moodCN2={neutral:'平静',happy:'开心',content:'满足',excited:'兴奋',angry:'生气',sad:'难过',bored:'无聊',anxious:'焦虑'};
+function renderMindStatus(s){
+  // 多人格状态
+  const mp=document.getElementById('mindPersonas');
+  if(mp){
+    const ps=s.personas||[];
+    mp.innerHTML = ps.length? ps.map(p=>`
+      <div class="mem-row" style="display:block">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <b>${esc(p.name)}</b> <span class="mood-pill mood-${p.mood}" style="font-size:11px">${moodCN2[p.mood]||p.mood}</span>
+          <span style="font-size:11px;color:#888">${p.autonomy==='work'?'工作型':'陪伴型'}${p.busy?' · 思考中…':''}</span>
+        </div>
+        <div class="mem-text" style="margin-top:4px;color:#444">💭 ${esc(p.currentThought||'(还没想什么)')}</div>
+        <div style="font-size:11px;color:#999;margin-top:3px">精力${(p.energy*100|0)}% · 社交欲${(p.socialDrive*100|0)}% · 目标${p.goals} · 最近:${p.lastAction||'-'}</div>
+      </div>`).join(''):'<div class="empty">无</div>';
+  }
+  // 人格选择器
+  const sel=document.getElementById('mindPersonaSel');
+  if(sel && s.personas){
+    const cur=sel.value;
+    if(sel.options.length!==s.personas.length){
+      sel.innerHTML=s.personas.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+      if(cur) sel.value=cur; _mindSel=sel.value;
+    }
+  }
+  // 聊天人格选择器
+  syncChatPersonas(s.personas);
+  // 待批准
+  const ac=document.getElementById('approvalsCard');
+  if(ac){
+    const a=s.approvals||[];
+    document.getElementById('approvalsBadge').textContent=a.length?`(${a.length})`:'';
+    ac.innerHTML=a.length?a.map(r=>`<div class="mem-row" style="display:block"><div class="mem-text"><code>${esc(r.command)}</code></div><div style="margin-top:6px"><button class="btn btn-primary btn-sm" onclick="approveCmd('${r.id}')">批准</button> <button class="btn btn-sm" onclick="rejectCmd('${r.id}')">拒绝</button> <span style="font-size:11px;color:#999">${esc(r.personaId||'')}</span></div></div>`).join(''):'<div class="empty">无</div>';
+  }
+}
+async function approveCmd(id){ await fetch('/api/approvals/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); }
+async function rejectCmd(id){ await fetch('/api/approvals/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); }
+
+async function refreshMind(){
+  const sel=document.getElementById('mindPersonaSel');
+  const pid=sel?.value||_mindSel;
+  if(!pid) return;
+  const thoughts=await fetch('/api/thoughts?persona='+encodeURIComponent(pid)+'&limit=60').then(r=>r.json()).catch(()=>[]);
+  const tc=document.getElementById('thoughtsCard');
+  tc.innerHTML=(thoughts&&thoughts.length)?thoughts.map(t=>`<div class="mem-row"><div class="mem-tag">${new Date(t.created_at).toLocaleTimeString('zh-CN')} · ${t.kind}${t.action?'→'+t.action:''}</div><div class="mem-text">${esc(t.content)}</div></div>`).join(''):'<div class="empty">还没有念头</div>';
+  const goals=await fetch('/api/goals?persona='+encodeURIComponent(pid)).then(r=>r.json()).catch(()=>[]);
+  const gc=document.getElementById('goalsCard');
+  gc.innerHTML=(goals&&goals.length)?goals.map(g=>`<div class="mem-row" style="display:block"><div class="mem-text"><b>${esc(g.title)}</b> <span style="font-size:11px;color:#888">[${g.kind}·${g.status}·${(g.progress*100|0)}%]</span></div>${g.description?`<div style="font-size:12px;color:#666">${esc(g.description)}</div>`:''}</div>`).join(''):'<div class="empty">还没有目标</div>';
+}
+
+async function refreshWm(){ const r=await fetch('/api/memory/working').then(r=>r.json()); document.getElementById('wmCard').innerHTML=r.length?r.map(c=>`<div class="mem-row"><div class="mem-tag">${c.type}</div><div class="mem-text">${esc(c.content)}</div></div>`).join(''):'<div class="empty">空</div>' }
+async function refreshEp(){ const r=await fetch('/api/memory/episodic').then(r=>r.json()); document.getElementById('epTotal').textContent=`共${r.total}条`; document.getElementById('epCard').innerHTML=(r.rows||[]).length?r.rows.map(r=>`<div class="mem-row"><div class="mem-tag">${new Date(r.created_at).toLocaleString('zh-CN')} · sig ${(r.significance||0).toFixed(2)}</div><div class="mem-text">${esc(r.summary||r.content||'').slice(0,120)}</div></div>`).join(''):'<div class="empty">无</div>' }
+
+// === Chat (streaming) ===
+
+// 加载历史消息
+async function loadChatHistory() {
+  try {
+    const history = await fetch('/api/chat/history?limit=100').then(r => r.json());
+    if (!history?.length) return;
+    const a = document.getElementById('chatMsgs');
+    a.querySelector('.empty')?.remove();
+    for (const msg of history) {
+      const n = new Date(msg.timestamp).toLocaleTimeString('zh-CN');
+      const cls = msg.direction === 'in' ? 'msg-user' : 'msg-ai';
+      a.innerHTML += `<div class="msg ${cls}"><div class="msg-body">${esc(msg.content)}</div><div class="msg-time">${n}</div></div>`;
+    }
+    a.scrollTop = a.scrollHeight;
+  } catch {}
+}
+
+function switchChatPersona() {
+  const sel = document.getElementById('chatPersonaSel');
+  _chatPersona = sel.value;
+  _chatPersonaName = sel.options[sel.selectedIndex]?.textContent || '';
+  document.getElementById('chatPersonaTag').textContent = _chatPersonaName ? `现在和「${_chatPersonaName}」对话` : '';
+  ws.send(JSON.stringify({ type: 'set_persona', personaId: _chatPersona }));
+}
+
+function sendChat() {
+  const i = document.getElementById('chatInput'), t = i.value.trim(); if(!t) return; i.value='';
+  if (currentStreamMsg) return;
+  const a = document.getElementById('chatMsgs'), n = new Date().toLocaleTimeString('zh-CN');
+  a.querySelector('.empty')?.remove();
+  // 用户气泡
+  a.innerHTML += `<div class="msg msg-user"><div class="msg-body">${esc(t)}</div><div class="msg-time">${n}</div></div>`;
+  // 思考中占位（认知管线异步处理，先显示打字指示）
+  currentStreamMsg = document.createElement('div');
+  currentStreamMsg.className = 'msg msg-ai';
+  currentStreamMsg.innerHTML = `<div class="msg-name">${esc(_chatPersonaName||'…')}</div><div class="msg-body">正在思考<span class="dots">…</span></div><div class="msg-time">${n}</div>`;
+  a.appendChild(currentStreamMsg);
+  a.scrollTop = a.scrollHeight;
+  document.getElementById('chatSendBtn').textContent = '…';
+  ws.send(JSON.stringify({ type: 'chat', message: t, personaId: _chatPersona || undefined }));
+  // 兜底：认知循环可能选择"沉默思考/去工作"，超时给提示
+  clearTimeout(_chatTimeout);
+  _chatTimeout = setTimeout(() => {
+    if (currentStreamMsg) {
+      currentStreamMsg.querySelector('.msg-body').innerHTML = `<span style="color:#999">（${esc(_chatPersonaName||'对方')}在忙别的，暂时没回你…可以再说一句）</span>`;
+      currentStreamMsg.querySelector('.msg-body').classList.remove('cursor');
+      currentStreamMsg = null;
+      document.getElementById('chatSendBtn').textContent = '发送';
+    }
+  }, 90000);
+}
+
+function onChatThinking(persona) {
+  if (currentStreamMsg && persona) {
+    const nameEl = currentStreamMsg.querySelector('.msg-name');
+    if (nameEl) nameEl.textContent = persona;
+    _chatPersonaName = persona || _chatPersonaName;
+  }
+}
+
+function onChatReply(msg) {
+  clearTimeout(_chatTimeout);
+  const a = document.getElementById('chatMsgs'), n = new Date().toLocaleTimeString('zh-CN');
+  const body = renderMarkdown(msg.text || '');
+  const monologue = msg.thought ? `<div class="msg-mono" onclick="this.classList.toggle('open')"><span class="mono-toggle">💭 内心独白</span><div class="mono-text">${esc(msg.thought)}</div></div>` : '';
+  if (currentStreamMsg) {
+    currentStreamMsg.innerHTML = `<div class="msg-name">${esc(msg.persona||_chatPersonaName||'')}</div><div class="msg-body">${body}</div>${monologue}<div class="msg-time">${n}</div>`;
+    currentStreamMsg = null;
+  } else {
+    a.querySelector('.empty')?.remove();
+    a.innerHTML += `<div class="msg msg-ai"><div class="msg-name">${esc(msg.persona||'')}</div><div class="msg-body">${body}</div>${monologue}<div class="msg-time">${n}</div></div>`;
+  }
+  a.scrollTop = a.scrollHeight;
+  document.getElementById('chatSendBtn').textContent = '发送';
+}
+
+// 极简 markdown：代码块/行内代码/换行（工作型人格会回复代码）
+function renderMarkdown(s) {
+  let h = esc(s);
+  h = h.replace(/```([\s\S]*?)```/g, (m, c) => `<pre class="code">${c.replace(/^\n/,'')}</pre>`);
+  h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+  h = h.replace(/\n/g, '<br>');
+  return h;
+}
+
+// 填充聊天人格选择器（来自状态广播）
+function syncChatPersonas(personas) {
+  const sel = document.getElementById('chatPersonaSel');
+  if (!sel || !personas) return;
+  if (sel.options.length !== personas.length) {
+    const cur = sel.value;
+    sel.innerHTML = personas.map(p => `<option value="${p.id}">${esc(p.name)}（${p.autonomy==='work'?'工作型':'陪伴型'}）</option>`).join('');
+    if (cur) sel.value = cur;
+    if (!_chatPersona) { _chatPersona = sel.value; _chatPersonaName = personas[0]?.name || ''; document.getElementById('chatPersonaTag').textContent = _chatPersonaName ? `现在和「${_chatPersonaName}」对话` : ''; }
+  }
+}
+
+// === Navigation ===
+document.querySelectorAll('.nav-item').forEach(el=>el.addEventListener('click',()=>{
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+el.dataset.tab).classList.add('active');
+  document.getElementById('tabTitle').textContent=el.textContent.replace(/[A-Za-z ]/g,'').trim();
+  loadTab(el.dataset.tab);
+}));
+
+function loadTab(tab) {
+  if (tab === 'mind') { refreshMind(); if(window._mindInterval==null) window._mindInterval=setInterval(()=>{ if(document.getElementById('tab-mind').classList.contains('active')) refreshMind(); }, 4000); }
+  if (tab === 'chat') loadChatHistory();
+  if (tab === 'ai-config') refreshAiConfig();
+  if (tab === 'bot-config') refreshBotConfig();
+}
+
+// === HTTP helpers ===
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+async function api(p,b){const o=b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{};const r=await fetch(p,o);return r.json()}
+async function refreshAiConfig(){
+  const[ps,cfg]=await Promise.all([api('/api/personas'),api('/api/config')]);
+  document.getElementById('personaConfig').innerHTML=ps.map(p=>`<div class="config-row"><div class="config-label">${p.name} · ${p.personaId}</div><div class="config-value">${p.type} · ${p.mood||''}</div><button class="btn btn-primary btn-sm" style="margin-top:6px" onclick="switchPersona('${p.personaId}')">切换</button></div>`).join('');
+  document.getElementById('locationConfig').innerHTML=`<div class="config-row"><div class="config-label">城市/时区</div><div class="config-value">${esc(cfg.location?.city)} · ${esc(cfg.location?.timezone)}</div></div>`;
+  document.getElementById('modelConfig').innerHTML=`<div class="config-row"><div class="config-label">模型</div><div class="config-value">${esc(cfg.llm?.model)}</div></div><div class="config-row"><div class="config-label">Max Tokens / Temp</div><div class="config-value">${cfg.llm?.maxTokens} / ${cfg.llm?.temperature}</div></div><div class="config-row"><div class="config-label">心跳 / 微睡眠</div><div class="config-value">${cfg.heartbeat?.intervalMs}ms / ${cfg.heartbeat?.microSleepIntervalTicks} ticks</div></div>`;
+}
+async function refreshBotConfig(){
+  const[cfg,tools,mcp]=await Promise.all([api('/api/config'),api('/api/tools'),api('/api/mcp')]);
+  document.getElementById('qqConfig').innerHTML=`<div class="config-row"><div class="config-label">App ID</div><div class="config-value">${cfg.qq?.appId?'● 已配置':'○ 未配置'}</div></div><div class="config-row"><div class="config-label">连接状态</div><div class="config-value" style="color:${cfg.qq?.connected?'#1B7F3B':'#C0392B'}">${cfg.qq?.connected?'已连接':'未连接'}</div></div>`;
+  document.getElementById('wxConfig').innerHTML=`<div class="config-row"><div class="config-label">Token</div><div class="config-value">${cfg.weixin?.hasToken?'● 已配置':'○ 未配置'}</div></div><div class="config-row"><div class="config-label">连接状态</div><div class="config-value" style="color:${cfg.weixin?.connected?'#1B7F3B':'#C0392B'}">${cfg.weixin?.connected?'已连接':'未连接'}</div></div>`;
+  document.getElementById('toolConfig').innerHTML=tools.length?tools.map(t=>`<div class="mem-row"><div class="mem-tag">${t.source} · ${t.name}</div><div class="mem-text">${esc(t.description||'')}</div></div>`).join(''):'<div class="empty">无</div>';
+  document.getElementById('mcpConfig').innerHTML=mcp.length?mcp.map(s=>`<div class="mem-row"><div class="mem-tag">${s.connected?'已连接':'断开'} · ${s.toolCount} tools</div><div class="mem-text">${esc(s.name)}</div></div>`).join(''):'<div class="empty">无</div>';
+}
+function addSkillPanel(){const n=prompt('技能名称'),d=prompt('描述'),c=prompt('代码');if(n&&c)api('/api/tool/add',{name:n,desc:d,code:c}).then(refreshBotConfig)}
+function addMcpPanel(){const n=prompt('MCP名称'),cmd=prompt('命令'),a=prompt('参数');if(n&&cmd)api('/api/mcp/add',{name:n,command:cmd,args:a}).then(refreshBotConfig)}
+async function switchPersona(id){await api('/api/persona/switch',{personaId:id});refreshAiConfig()}
+async function regPersona(){await api('/api/persona/register',{seedFile:document.getElementById('personaSeedFile').value});refreshAiConfig()}
+
+loadChatHistory(); refreshWm(); refreshEp();
+</script>
+</body>
+</html>

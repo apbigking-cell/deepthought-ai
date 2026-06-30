@@ -1,0 +1,8 @@
+node_modules
+.git
+.gitignore
+.env.example
+start.bat
+部署指南.md
+*.zip
+data/memory.db
