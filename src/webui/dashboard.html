@@ -174,7 +174,8 @@ input:focus,textarea:focus,select:focus{border-color:rgba(0,0,0,0.2);box-shadow:
 
 <script>
 // === WebSocket ===
-const ws = new WebSocket(`ws://${location.host}`);
+const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+const ws = new WebSocket(`${wsProtocol}//${location.host}`);
 let currentStreamMsg = null;
 
 ws.onopen = () => {
