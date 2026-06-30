@@ -126,8 +126,14 @@ ${actions.map((a, i) => `${i + 1}. ${a}`).join('\n')}
 
     switch (decision.action) {
       case 'speak': {
-        const text = (decision.say || '').trim();
-        if (text) this._sendMessage(text, { bot, userId: userId || defaultUser, latest });
+        let text = (decision.say || '').trim();
+        // 防御：LLM 返回 speak 但 say 为空/太短时，给一个兜底回复
+        // 这样即使模型输出异常，对方也能收到回应而不是石沉大海
+        if (!text) {
+          console.warn('[Cycle] LLM returned action=speak but say is empty, using fallback');
+          text = '嗯…我在听呢，你继续说。';
+        }
+        this._sendMessage(text, { bot, userId: userId || defaultUser, latest });
         result.text = text;
         break;
       }

@@ -188,6 +188,11 @@ export class PersonaRegistry {
     return this.personas.get(this.defaultId) || [...this.personas.values()][0] || null;
   }
 
+  // 精确判断某人格是否已注册（不像 getPersona 会回退到默认人格）
+  has(personaId) {
+    return this.personas.has(personaId);
+  }
+
   // 计数
   get count() { return this.personas.size; }
 }

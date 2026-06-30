@@ -130,12 +130,27 @@ const allWeixinBots = [weixinBot, ...extraWeixinBots].filter(b => b.botToken);
 const bots = [qqBot, webBot, ...allWeixinBots];
 const defaultUserId = process.env.QQ_DEFAULT_USER_ID || null;
 
-if (extraWeixinBots.length > 0) {
-  console.log(`[Init] Extra WeChat Bots: ${extraWeixinBots.length} (each bound to a persona)`);
-  for (const b of extraWeixinBots) {
-    console.log(`  - ${b.instanceName} → persona: ${b.boundPersonaId || '(default)'}`);
-  }
+// ===== 启动诊断：微信实例配置一览（缺 token 时大声警告）=====
+console.log('');
+console.log('╔══════════════ 微信实例配置诊断 ══════════════╗');
+if (config.weixinBot.botToken) {
+  console.log(`║  主微信(默认人格): 已配置 token ✓`);
+} else {
+  console.log(`║  主微信(默认人格): 未配置 WEIXIN_BOT_TOKEN ✗`);
 }
+if (extraWeixinBots.length > 0) {
+  for (const b of extraWeixinBots) {
+    const personaOk = personaRegistry.getPersona(b.boundPersonaId);
+    const status = personaOk ? '✓' : `✗ (人格 ${b.boundPersonaId} 未注册!)`;
+    console.log(`║  附加微信 ${b.instanceName} → 人格 ${b.boundPersonaId}: ${status}`);
+  }
+} else {
+  console.log(`║  附加微信实例: 0 个（未配置 WEIXIN_BOT_2_TOKEN 等）`);
+  console.log(`║  ⚠ 若你有给芙宁娜/小语单独的微信号，必须设置: `);
+  console.log(`║    WEIXIN_BOT_2_TOKEN=<token>  WEIXIN_BOT_2_PERSONA=furina`);
+}
+console.log('╚══════════════════════════════════════════════╝');
+console.log('');
 
 // MCP
 let mcpManager = null;

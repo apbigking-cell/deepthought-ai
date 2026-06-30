@@ -111,8 +111,13 @@ export class HeartbeatOrchestrator {
           let persona;
           let pid;
           if (bot.boundPersonaId) {
+            const isRegistered = personaRegistry?.has?.(bot.boundPersonaId);
             persona = personaRegistry?.getPersona(bot.boundPersonaId) || personaRegistry?.getDefault();
             pid = bot.boundPersonaId;
+            // 警告：绑定的人格在注册表里找不到（会回退到默认人格回复，但用绑定的 pid 路由）
+            if (!isRegistered) {
+              console.warn(`[Heartbeat] ⚠ Bot ${bot.instanceName} 绑定的人格 "${bot.boundPersonaId}" 未注册！回退到默认人格回复。请检查 data/personas/ 目录是否有对应种子文件。`);
+            }
             // 同时绑定到 router，让回复能正确路由回去
             if (personaRouter) personaRouter.assignPersona(platform, m.userId, pid);
           } else {
