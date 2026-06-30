@@ -40,6 +40,13 @@ export const config = {
     //       WEIXIN_BOT_3_TOKEN=yyy, WEIXIN_BOT_3_PERSONA=xiaoyu
     instances: (() => {
       const list = [];
+      // 调试：打印所有 WEIXIN_BOT_ 开头的环境变量
+      const wxVars = Object.keys(process.env).filter(k => k.startsWith('WEIXIN_BOT'));
+      if (wxVars.length > 0) {
+        console.log('[Config] WEIXIN_BOT env vars found:', wxVars.map(k => `${k}=${process.env[k]?.slice(0,12)}...`).join(', '));
+      } else {
+        console.log('[Config] WARNING: No WEIXIN_BOT* env vars found at all!');
+      }
       for (let i = 2; i <= 10; i++) {
         const token = process.env[`WEIXIN_BOT_${i}_TOKEN`];
         if (!token) continue;
@@ -47,6 +54,7 @@ export const config = {
         const name = process.env[`WEIXIN_BOT_${i}_NAME`] || `weixin-${i}`;
         list.push({ token, personaId: persona, name });
       }
+      console.log(`[Config] Extra WeChat instances parsed: ${list.length}`);
       return list;
     })(),
   },

@@ -356,26 +356,35 @@ export class WebUIServer {
             boundPersonaId: bot.boundPersonaId,
             isRunning: bot.isRunning,
             hasToken: !!bot.botToken,
-            tokenPrefix: bot.botToken ? bot.botToken.slice(0, 8) + '...' : '(none)',
+            tokenPrefix: bot.botToken ? bot.botToken.slice(0, 12) + '...' : '(none)',
             inboundQueueSize: bot.inboundBuffer?.length || 0,
             outboundQueueSize: bot.outboundQueue?.length || 0,
             reconnectAttempts: bot.reconnectAttempts,
             getUpdatesBufLength: (bot.getUpdatesBuf || '').length,
             seenMsgCount: bot.seenMsgIds?.size || 0,
-            // 网络层诊断
             lastPollSecAgo: bot.lastPollAt ? Math.round((Date.now() - bot.lastPollAt) / 1000) : -1,
             lastPollRet: bot.lastPollRet,
             lastPollMsgCount: bot.lastPollMsgCount,
           });
         }
+        // 同时返回 Railway 看到的环境变量（只显示前12字符）
+        const wxEnvVars = {};
+        for (const k of Object.keys(process.env)) {
+          if (k.startsWith('WEIXIN_BOT')) {
+            wxEnvVars[k] = (process.env[k] || '').slice(0, 12) + '...';
+          }
+        }
         result = {
           bots: botDebug,
+          botsTotal: (this.components.bots || []).length,
           orchestratorTick: this.components.orchestrator?.tickCount,
           personas: (this.components.personaRegistry?.list() || []).map(p => ({
             id: p.personaId,
             name: p.name,
             has: this.components.personaRegistry?.has?.(p.personaId),
           })),
+          envVars: wxEnvVars,
+          configInstances: config.weixinBot?.instances?.length ?? -1,
         };
         break;
       }
