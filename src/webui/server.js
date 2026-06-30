@@ -213,7 +213,12 @@ export class WebUIServer {
 
   _serveHtml(res) {
     const html = readFileSync(resolve(__dirname, 'dashboard.html'), 'utf-8');
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    });
     res.end(html);
   }
 

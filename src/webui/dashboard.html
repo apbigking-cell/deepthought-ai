@@ -353,9 +353,12 @@ async function sendChat() {
   document.getElementById('chatSendBtn').disabled = true;
   document.getElementById('chatSendBtn').textContent = '…';
   try {
+    console.log('[chat] sending...', t);
     const r = await fetch('/api/chat/send', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: t, personaId: _chatPersona || undefined }) });
+    console.log('[chat] send response status', r.status);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const rj = await r.json();
+    console.log('[chat] send response json', rj);
     if (!rj.ok) {
       if (currentStreamMsg) { currentStreamMsg.querySelector('.msg-body').textContent = '发送失败: ' + (rj.error||'未知错误'); currentStreamMsg = null; }
       document.getElementById('chatSendBtn').disabled = false;
@@ -408,7 +411,6 @@ function onChatThinking(persona) {
 }
 
 function onChatReply(msg) {
-  clearTimeout(_chatTimeout);
   const a = document.getElementById('chatMsgs'), n = new Date().toLocaleTimeString('zh-CN');
   const body = renderMarkdown(msg.text || '');
   const monologue = msg.thought ? `<div class="msg-mono" onclick="this.classList.toggle('open')"><span class="mono-toggle">💭 内心独白</span><div class="mono-text">${esc(msg.thought)}</div></div>` : '';
