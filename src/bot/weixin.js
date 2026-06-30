@@ -21,6 +21,11 @@ export class WeixinBot extends EventEmitter {
     this.maxReconnectAttempts = 10;
     this.seenMsgIds = new Set(); // 本次会话内去重
 
+    // 诊断：跟踪最近一次轮询响应
+    this.lastPollAt = 0;
+    this.lastPollRet = null;
+    this.lastPollMsgCount = 0;
+
     // 消息缓冲区（和QQ Bot一样的接口）
     this.inboundBuffer = [];
     this.outboundQueue = [];
@@ -138,6 +143,14 @@ export class WeixinBot extends EventEmitter {
         }
 
         const data = await res.json();
+        this.lastPollAt = Date.now();
+        this.lastPollRet = data.ret !== undefined ? data.ret : (data.errcode !== undefined ? data.errcode : 0);
+        this.lastPollMsgCount = data.msgs?.length || 0;
+
+        // 诊断：记录非正常响应
+        if (data.ret !== 0 && data.ret !== undefined) {
+          console.warn(`[${this.instanceName}] Poll ret=${data.ret}, errcode=${data.errcode}, msg=${data.errmsg || data.msg || ''}`);
+        }
 
         if (data.ret === -14 || data.errcode === -14) {
           console.error('[WeixinBot] Session expired, need re-login');

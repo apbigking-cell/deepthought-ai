@@ -362,6 +362,10 @@ export class WebUIServer {
             reconnectAttempts: bot.reconnectAttempts,
             getUpdatesBufLength: (bot.getUpdatesBuf || '').length,
             seenMsgCount: bot.seenMsgIds?.size || 0,
+            // 网络层诊断
+            lastPollSecAgo: bot.lastPollAt ? Math.round((Date.now() - bot.lastPollAt) / 1000) : -1,
+            lastPollRet: bot.lastPollRet,
+            lastPollMsgCount: bot.lastPollMsgCount,
           });
         }
         result = {
