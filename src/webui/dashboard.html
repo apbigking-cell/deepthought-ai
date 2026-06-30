@@ -173,22 +173,32 @@ input:focus,textarea:focus,select:focus{border-color:rgba(0,0,0,0.2);box-shadow:
 </div>
 
 <script>
-// === WebSocket ===
-const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-const ws = new WebSocket(`${wsProtocol}//${location.host}`);
+// === HTTP API (no WebSocket dependency, works through any proxy) ===
 let currentStreamMsg = null;
 
-ws.onopen = () => {
-  ws.send(JSON.stringify({ type: 'subscribe_status' }));
+// Page load: fetch status + personas
+(async function init() {
+  try {
+    const r = await api('/api/status');
+    if (r && r.personas) {
+      syncChatPersonas(r.personas);
+      document.getElementById('statusText').textContent = r.isSleeping ? '微睡眠' : (r.isProcessing ? '处理中' : '运行中');
+      document.getElementById('statusTick').textContent = 'Tick ' + (r.tick || 0);
+    }
+  } catch {}
   loadTab('dashboard');
-};
-ws.onmessage = (e) => {
-  const msg = JSON.parse(e.data);
-  if (msg.type === 'status') onStatus(msg.data);
-  else if (msg.type === 'chat_thinking') onChatThinking(msg.persona);
-  else if (msg.type === 'chat_reply') onChatReply(msg);
-  else if (msg.type === 'persona_set') { _chatPersonaName = msg.name; }
-};
+  // poll status every 5s
+  setInterval(async () => {
+    try {
+      const r = await api('/api/status');
+      if (r) {
+        document.getElementById('statusText').textContent = r.isSleeping ? '微睡眠' : (r.isProcessing ? '处理中' : '运行中');
+        document.getElementById('statusTick').textContent = 'Tick ' + (r.tick || 0);
+        syncChatPersonas(r.personas);
+      }
+    } catch {}
+  }, 5000);
+})();
 
 let _mindSel = null;
 let _chatPersona = null;     // 当前对话人格id
@@ -298,34 +308,43 @@ function switchChatPersona() {
   _chatPersona = sel.value;
   _chatPersonaName = sel.options[sel.selectedIndex]?.textContent || '';
   document.getElementById('chatPersonaTag').textContent = _chatPersonaName ? `现在和「${_chatPersonaName}」对话` : '';
-  ws.send(JSON.stringify({ type: 'set_persona', personaId: _chatPersona }));
 }
 
-function sendChat() {
+async function sendChat() {
   const i = document.getElementById('chatInput'), t = i.value.trim(); if(!t) return; i.value='';
   if (currentStreamMsg) return;
   const a = document.getElementById('chatMsgs'), n = new Date().toLocaleTimeString('zh-CN');
   a.querySelector('.empty')?.remove();
-  // 用户气泡
   a.innerHTML += `<div class="msg msg-user"><div class="msg-body">${esc(t)}</div><div class="msg-time">${n}</div></div>`;
-  // 思考中占位（认知管线异步处理，先显示打字指示）
   currentStreamMsg = document.createElement('div');
   currentStreamMsg.className = 'msg msg-ai';
-  currentStreamMsg.innerHTML = `<div class="msg-name">${esc(_chatPersonaName||'…')}</div><div class="msg-body">正在思考<span class="dots">…</span></div><div class="msg-time">${n}</div>`;
+  currentStreamMsg.innerHTML = `<div class="msg-name">${esc(_chatPersonaName||'')}</div><div class="msg-body">思考中…</div><div class="msg-time">${n}</div>`;
   a.appendChild(currentStreamMsg);
   a.scrollTop = a.scrollHeight;
   document.getElementById('chatSendBtn').textContent = '…';
-  ws.send(JSON.stringify({ type: 'chat', message: t, personaId: _chatPersona || undefined }));
-  // 兜底：认知循环可能选择"沉默思考/去工作"，超时给提示
-  clearTimeout(_chatTimeout);
-  _chatTimeout = setTimeout(() => {
-    if (currentStreamMsg) {
-      currentStreamMsg.querySelector('.msg-body').innerHTML = `<span style="color:#999">（${esc(_chatPersonaName||'对方')}在忙别的，暂时没回你…可以再说一句）</span>`;
-      currentStreamMsg.querySelector('.msg-body').classList.remove('cursor');
-      currentStreamMsg = null;
-      document.getElementById('chatSendBtn').textContent = '发送';
+  try {
+    const r = await api('/api/chat/send', { message: t, personaId: _chatPersona || undefined });
+    const nn = new Date().toLocaleTimeString('zh-CN');
+    if (r.reply) {
+      onChatReply({ text: r.reply, persona: r.persona, thought: r.thought });
+    } else if (r.hint === 'thinking') {
+      if (currentStreamMsg) {
+        currentStreamMsg.querySelector('.msg-body').innerHTML = `<span style="color:#999">（${esc(_chatPersonaName||'')}暂时没回…再试一次）</span>`;
+        currentStreamMsg = null;
+      }
+    } else {
+      if (currentStreamMsg) {
+        currentStreamMsg.querySelector('.msg-body').innerHTML = `<span style="color:#c0392b">错误: ${esc(r.error||'unknown')}</span>`;
+        currentStreamMsg = null;
+      }
     }
-  }, 90000);
+  } catch(e) {
+    if (currentStreamMsg) {
+      currentStreamMsg.querySelector('.msg-body').textContent = '网络错误，请重试';
+      currentStreamMsg = null;
+    }
+  }
+  document.getElementById('chatSendBtn').textContent = '发送';
 }
 
 function onChatThinking(persona) {

@@ -67,6 +67,10 @@ export class WebUIServer {
       try { thought = pid ? this.components.mindRegistry?.get(pid, persona.autonomyMode).snapshot().currentThought : null; } catch {}
       const payload = JSON.stringify({ type: 'chat_reply', text, persona: persona?.name || '', personaId: pid, thought });
       for (const ws of this.sockets) if (ws.readyState === 1) ws.send(payload);
+      // resolve HTTP polling promise
+      if (this._pendingReplies?.has(userId)) {
+        this._pendingReplies.get(userId)({ text, persona: persona?.name || '', personaId: pid, thought });
+      }
     });
   }
 
@@ -237,6 +241,33 @@ export class WebUIServer {
         const db = getDb(); const now = Date.now();
         for (const [k, v] of Object.entries(body)) db.prepare('INSERT OR REPLACE INTO system_config (key, value, updated_at) VALUES (?,?,?)').run(k, String(v), now);
         saveToDisk(); result = { ok: true }; break;
+      }
+      case '/api/status':
+        result = this._getStatus(); break;
+      case '/api/chat/send': {
+        const text = (body.message || '').trim();
+        if (!text) { result = { error: 'empty' }; break; }
+        const { webBot, personaRouter, personaRegistry } = this.components;
+        if (!webBot) { result = { error: 'webbot not ready' }; break; }
+        if (body.personaId) personaRouter?.assignPersona('web', 'web_user', body.personaId);
+        const persona = personaRouter?.resolvePersona('web', 'web_user') || personaRegistry?.getDefault();
+        const pid = persona?.personaId;
+        // create promise for async reply
+        const replyPromise = new Promise(resolve => {
+          this._pendingReplies = this._pendingReplies || new Map();
+          this._pendingReplies.set('web_user', resolve);
+        });
+        webBot.receiveFromWeb('web_user', text, 'Web用户');
+        // wait up to 30s for cognitive cycle to respond
+        const timeout = new Promise(r => setTimeout(() => r(null), 30000));
+        const reply = await Promise.race([replyPromise, timeout]);
+        this._pendingReplies?.delete('web_user');
+        if (reply) {
+          result = { ok: true, reply: reply.text, persona: reply.persona, personaId: pid, thought: reply.thought };
+        } else {
+          result = { ok: true, reply: null, persona: persona?.name, personaId: pid, thought: null, hint: 'thinking' };
+        }
+        break;
       }
       case '/api/personas':
         result = this.components.personaRegistry?.list().map(p => p.getSummary()) || []; break;
