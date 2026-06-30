@@ -106,8 +106,19 @@ export class HeartbeatOrchestrator {
             continue;
           }
 
-          const persona = personaRouter?.resolvePersona(platform, m.userId) || personaRegistry?.getDefault();
-          const pid = persona?.personaId || personaRegistry?.defaultId;
+          // 解析人格：如果 Bot 绑定了 personaId，直接使用绑定的人格（多微信实例场景）
+          // 否则走 personaRouter 按用户路由
+          let persona;
+          let pid;
+          if (bot.boundPersonaId) {
+            persona = personaRegistry?.getPersona(bot.boundPersonaId) || personaRegistry?.getDefault();
+            pid = bot.boundPersonaId;
+            // 同时绑定到 router，让回复能正确路由回去
+            if (personaRouter) personaRouter.assignPersona(platform, m.userId, pid);
+          } else {
+            persona = personaRouter?.resolvePersona(platform, m.userId) || personaRegistry?.getDefault();
+            pid = persona?.personaId || personaRegistry?.defaultId;
+          }
           if (!this.pendingByPersona.has(pid)) this.pendingByPersona.set(pid, []);
           this.pendingByPersona.get(pid).push(m);
           sensoryBuffer?.write(m, 'social');

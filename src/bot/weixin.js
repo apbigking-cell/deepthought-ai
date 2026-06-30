@@ -8,9 +8,12 @@ import { config } from '../config.js';
 const BASE = 'https://ilinkai.weixin.qq.com';
 
 export class WeixinBot extends EventEmitter {
-  constructor() {
+  constructor(options = {}) {
     super();
-    this.botToken = config.weixinBot?.botToken || null;
+    // 支持多实例：每个实例可以有自己的 token 和绑定的 personaId
+    this.botToken = options.botToken || config.weixinBot?.botToken || null;
+    this.boundPersonaId = options.personaId || null;  // 绑定的人格id（绑定后所有消息都路由到这个人格）
+    this.instanceName = options.name || 'weixin';     // 实例名称（用于日志）
     this.isRunning = false;
     this.pollTimer = null;
     this.getUpdatesBuf = '';

@@ -197,6 +197,7 @@ export class WebUIServer {
       memoriesForgotten: stats.memoriesForgotten || 0,
       qqConnected: this._isBotConnected('qq'),
       wxConnected: wxConnected,
+      weixinBots: this._getWeixinBotsStatus(),
     };
   }
 
@@ -396,8 +397,23 @@ export class WebUIServer {
     for (const bot of (this.components.bots || [])) {
       const n = bot?.constructor?.name || '';
       if (type === 'qq' && n === 'QQBot') return bot?.ws?.readyState === 1;
-      if (type === 'weixin' && n === 'WeixinBot') return bot?.isRunning === true;
+      if (type === 'weixin' && n === 'WeixinBot' && bot?.isRunning === true) return true;
     }
     return false;
+  }
+
+  _getWeixinBotsStatus() {
+    const list = [];
+    for (const bot of (this.components.bots || [])) {
+      const n = bot?.constructor?.name || '';
+      if (n !== 'WeixinBot') continue;
+      list.push({
+        name: bot.instanceName || 'weixin',
+        personaId: bot.boundPersonaId || null,
+        connected: bot?.isRunning === true,
+        hasToken: !!bot.botToken,
+      });
+    }
+    return list;
   }
 }

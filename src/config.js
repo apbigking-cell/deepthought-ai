@@ -35,6 +35,20 @@ export const config = {
 
   weixinBot: {
     botToken: process.env.WEIXIN_BOT_TOKEN || '',
+    // 多微信实例：每个人格可以绑定独立的微信号
+    // 格式：WEIXIN_BOT_2_TOKEN=xxx, WEIXIN_BOT_2_PERSONA=furina
+    //       WEIXIN_BOT_3_TOKEN=yyy, WEIXIN_BOT_3_PERSONA=xiaoyu
+    instances: (() => {
+      const list = [];
+      for (let i = 2; i <= 10; i++) {
+        const token = process.env[`WEIXIN_BOT_${i}_TOKEN`];
+        if (!token) continue;
+        const persona = process.env[`WEIXIN_BOT_${i}_PERSONA`] || '';
+        const name = process.env[`WEIXIN_BOT_${i}_NAME`] || `weixin-${i}`;
+        list.push({ token, personaId: persona, name });
+      }
+      return list;
+    })(),
   },
 
   location: {

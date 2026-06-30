@@ -122,8 +122,20 @@ console.log(`[Init] Cognition: ${personaRegistry.count} minds, ${goalStore.activ
 const qqBot = new QQBot();
 const weixinBot = new WeixinBot();
 const webBot = new WebBot(); // WebUI 在线聊天接入认知管线
-const bots = [qqBot, webBot].concat(config.weixinBot.botToken ? [weixinBot] : []);
+// 多微信实例：每个人格可以绑定独立的微信号
+const extraWeixinBots = (config.weixinBot.instances || []).map((inst, i) =>
+  new WeixinBot({ botToken: inst.token, personaId: inst.personaId, name: inst.name })
+);
+const allWeixinBots = [weixinBot, ...extraWeixinBots].filter(b => b.botToken);
+const bots = [qqBot, webBot, ...allWeixinBots];
 const defaultUserId = process.env.QQ_DEFAULT_USER_ID || null;
+
+if (extraWeixinBots.length > 0) {
+  console.log(`[Init] Extra WeChat Bots: ${extraWeixinBots.length} (each bound to a persona)`);
+  for (const b of extraWeixinBots) {
+    console.log(`  - ${b.instanceName} → persona: ${b.boundPersonaId || '(default)'}`);
+  }
+}
 
 // MCP
 let mcpManager = null;
@@ -201,6 +213,11 @@ async function main() {
   if (config.weixinBot.botToken) {
     weixinBot.connect().then(() => console.log('[Boot] WeChat Bot: Connected'))
       .catch(e => console.warn('[Boot] WeChat Bot:', e.message));
+  }
+  // 连接额外的微信实例（绑定人格）
+  for (const b of extraWeixinBots) {
+    b.connect().then(() => console.log(`[Boot] WeChat Bot (${b.instanceName}→${b.boundPersonaId}): Connected`))
+      .catch(e => console.warn(`[Boot] WeChat Bot (${b.instanceName}):`, e.message));
   }
 
   orchestrator.start();
@@ -350,6 +367,7 @@ async function shutdown() {
   orchestrator.stop();
   await qqBot.disconnect();
   await weixinBot.disconnect();
+  for (const b of extraWeixinBots) await b.disconnect();
   if (mcpManager) { disconnectMcpFromRegistry(mcpManager, toolRegistry); await mcpManager.disconnectAll(); }
   closeDatabase();
 }
