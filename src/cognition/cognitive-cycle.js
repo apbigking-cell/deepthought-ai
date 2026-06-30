@@ -183,11 +183,16 @@ ${actions.map((a, i) => `${i + 1}. ${a}`).join('\n')}
 
   _sendMessage(text, { bot, userId, latest }) {
     if (!text) return;
+    // 优先用消息来源的 Bot（芙宁娜微信发来的就用芙宁娜微信回）
     const targetBot = latest?._bot || bot;
     const targetUser = latest?.userId || userId;
+    const contextToken = latest?.contextToken || null;
     if (this.memoryStore?.working) this.memoryStore.working.put(`我: ${text}`, 'conversation');
+    console.log(`[Cycle] sendMessage via ${targetBot?.instanceName || targetBot?.constructor?.name || '?'}, user=${targetUser}, text=${text.slice(0, 30)}...`);
     if (targetBot && targetUser) {
-      targetBot.enqueueOutput(targetUser, text, latest?.id || latest?.contextToken);
+      targetBot.enqueueOutput(targetUser, text, contextToken);
+    } else {
+      console.warn(`[Cycle] No bot or userId to send message! bot=${!!targetBot}, user=${targetUser}`);
     }
   }
 
