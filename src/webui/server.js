@@ -292,6 +292,90 @@ export class WebUIServer {
       }
       case '/api/mcp/remove':
         await this.components.mcpManager?.removeServer(body.name); result = { ok: true }; break;
+      // ===== 诊断端点：模拟微信消息，端到端测试 =====
+      case '/api/test/simulate-wechat': {
+        // 用 HTTP 模拟一条微信消息注入到指定 Bot，等心跳处理完看回复
+        const { message, botName, userId } = body;
+        const text = (message || '').trim();
+        const targetName = botName || '芙宁娜专属';
+        if (!text) { result = { error: 'message is required' }; break; }
+
+        const targetBot = (this.components.bots || []).find(
+          b => b?.constructor?.name === 'WeixinBot' && b.instanceName === targetName
+        );
+        if (!targetBot) {
+          result = { error: `Bot "${targetName}" not found`, bots: (this.components.bots || []).map(b => b?.instanceName || b?.constructor?.name) };
+          break;
+        }
+
+        const uid = userId || `test_user_${Date.now()}`;
+        const fakeMsg = {
+          id: `test_${Date.now()}`,
+          userId: uid,
+          username: '测试用户',
+          content: text,
+          timestamp: Date.now(),
+          type: 'social_message',
+          contextToken: null,
+        };
+
+        // 直接注入到 Bot 的 inboundBuffer（和 WeChat 真实消息走的是同一个入口）
+        targetBot.inboundBuffer.push(fakeMsg);
+
+        // 等心跳处理（2 轮 = 2 秒）
+        await new Promise(r => setTimeout(r, 2500));
+
+        // 检查是否有出队回复
+        const hasOutput = targetBot.hasPendingOutput?.() || false;
+        const outQ = targetBot.outboundQueue || [];
+        const sentText = outQ.length > 0 ? outQ[outQ.length - 1].content : null;
+
+        // 清空测试数据
+        targetBot.outboundQueue = [];
+
+        result = {
+          ok: true,
+          message: text,
+          botName: targetName,
+          botConnected: targetBot.isRunning,
+          botBoundPersona: targetBot.boundPersonaId,
+          hasReply: !!sentText,
+          reply: sentText || '(无)',
+          stats: this.components.orchestrator?.getStats?.(),
+        };
+        break;
+      }
+
+      case '/api/test/bot-debug': {
+        // 详细 Bot 诊断信息
+        const botDebug = [];
+        for (const bot of (this.components.bots || [])) {
+          if (bot?.constructor?.name !== 'WeixinBot') continue;
+          botDebug.push({
+            name: bot.instanceName || '?',
+            boundPersonaId: bot.boundPersonaId,
+            isRunning: bot.isRunning,
+            hasToken: !!bot.botToken,
+            tokenPrefix: bot.botToken ? bot.botToken.slice(0, 8) + '...' : '(none)',
+            inboundQueueSize: bot.inboundBuffer?.length || 0,
+            outboundQueueSize: bot.outboundQueue?.length || 0,
+            reconnectAttempts: bot.reconnectAttempts,
+            getUpdatesBufLength: (bot.getUpdatesBuf || '').length,
+            seenMsgCount: bot.seenMsgIds?.size || 0,
+          });
+        }
+        result = {
+          bots: botDebug,
+          orchestratorTick: this.components.orchestrator?.tickCount,
+          personas: (this.components.personaRegistry?.list() || []).map(p => ({
+            id: p.personaId,
+            name: p.name,
+            has: this.components.personaRegistry?.has?.(p.personaId),
+          })),
+        };
+        break;
+      }
+
       case '/api/chat/history': {
         const db = getDb();
         const limit = parseInt(params.get('limit') || '50');
