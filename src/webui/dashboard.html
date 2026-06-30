@@ -291,9 +291,17 @@ async function refreshEp(){ const r=await fetch('/api/memory/episodic').then(r=>
 
 // 加载历史消息
 async function loadChatHistory() {
+  const a = document.getElementById('chatMsgs');
+  // if a message is in-flight, keep the UI as-is
+  if (currentStreamMsg) {
+    if (a.contains(currentStreamMsg)) return;
+    // stale (detached after tab switch): clean up and reload
+    currentStreamMsg = null;
+    document.getElementById('chatSendBtn').disabled = false;
+    document.getElementById('chatSendBtn').textContent = '发送';
+  }
   try {
     const history = await fetch('/api/chat/history?limit=100').then(r => r.json());
-    const a = document.getElementById('chatMsgs');
     a.innerHTML = '<div class="empty" style="margin:auto">输入消息开始对话</div>';
     if (!history?.length) return;
     a.querySelector('.empty')?.remove();
@@ -322,6 +330,10 @@ function clearChat() {
 }
 
 async function sendChat() {
+  // clean up stale in-flight message (e.g. after tab switch)
+  if (currentStreamMsg && !document.getElementById('chatMsgs').contains(currentStreamMsg)) {
+    currentStreamMsg = null;
+  }
   const i = document.getElementById('chatInput'), t = i.value.trim(); if(!t) return; i.value='';
   if (currentStreamMsg) return;
   // ensure persona selected
