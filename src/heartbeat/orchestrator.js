@@ -61,6 +61,37 @@ export class HeartbeatOrchestrator {
         for (const m of msgs) {
           m._bot = bot;
           const platform = bot.constructor?.name?.replace('Bot', '').toLowerCase() || 'terminal';
+
+          // 命令：切换人格（微信/QQ/Web 通用）
+          const cmd = (m.content || '').trim();
+          const personaMatch = cmd.match(/^\/(?:persona|人格|切换|switch)\s+(.+)$/i);
+          if (personaMatch && personaRouter) {
+            const input = personaMatch[1].trim();
+            // 按名称或ID匹配人格
+            const all = personaRegistry?.list() || [];
+            const found = all.find(p => p.personaId === input || p.name === input)
+              || all.find(p => p.name.includes(input) || p.personaId.includes(input));
+            if (found) {
+              personaRouter.assignPersona(platform, m.userId, found.personaId);
+              bot.enqueueOutput?.(m.userId, `已切换到「${found.name}」〜`, m.id);
+              this.stats.messagesProcessed++;
+              continue; // 不进入认知循环
+            } else {
+              const names = all.map(p => p.name).join('、');
+              bot.enqueueOutput?.(m.userId, `没找到「${input}」哦，当前可切换：${names}`, m.id);
+              this.stats.messagesProcessed++;
+              continue;
+            }
+          }
+
+          // 命令：列出人格
+          if (/^\/(?:personas|人格列表|列表)$/i.test(cmd) && personaRegistry) {
+            const names = personaRegistry.list().map(p => `${p.name}(${p.personaId})`).join('、');
+            bot.enqueueOutput?.(m.userId, `当前可用人格：${names}\n切换命令：/人格 名字`, m.id);
+            this.stats.messagesProcessed++;
+            continue;
+          }
+
           const persona = personaRouter?.resolvePersona(platform, m.userId) || personaRegistry?.getDefault();
           const pid = persona?.personaId || personaRegistry?.defaultId;
           if (!this.pendingByPersona.has(pid)) this.pendingByPersona.set(pid, []);
